@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>밥상뒤엎 – 검색 결과</title>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/search_result.css') }}">
+</head>
+
+<body>
+    <header>
+        <a class="brand" href="/">밥상뒤엎</a>
+        <form class="search" id="searchForm" role="search">
+            <input id="q" name="q" placeholder="레시피 검색" />
+            <button class="btn" type="submit">검색</button>
+        </form>
+    </header>
+
+    <main>
+        <div class="result-head">
+            <div class="query" id="queryText">검색어 없음</div>
+            <div class="sort">
+                <div class="seg">
+                    <button class="tab" data-sort="likes" aria-selected="true">인기순</button>
+                    <button class="tab" data-sort="recent">최신순</button>
+                    <button class="tab" data-sort="time">조리시간</button>
+                </div>
+                <a class="add" id="addBtn" href="/post">+ 추가하기</a>
+            </div>
+        </div>
+
+        <div class="grid" id="grid">
+            <aside class="rank">
+                <h3>오늘의 TOP 10</h3>
+                <ol id="rankList">
+                    <!-- JavaScript로 동적 생성 -->
+                </ol>
+            </aside>
+            <section class="list" id="resultList" aria-live="polite">
+                <!-- JavaScript로 동적 생성 -->
+            </section>
+        </div>
+
+        <div class="empty" id="empty" hidden>검색 결과가 없어요. 다른 키워드를 시도해보세요.</div>
+    </main>
+
+    <button class="fab" id="fabAdd">+ 추가</button>
+
+    <!-- 모달 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">레시피 상세</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">로딩 중...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 파일 포함 -->
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/post_detail.js') }}"></script>
+    <script>
+        // 이미지 슬라이더 전역 변수
+        let currentSlideIndex = 0;
+        let totalSlides = 0;
+
+        // 슬라이드 변경 함수
+        window.changeSlide = function (direction) {
+            const images = document.querySelectorAll('.slider-image');
+            const dots = document.querySelectorAll('.dot');
+            const counter = document.querySelector('.image-counter');
+
+            if (images.length === 0) return;
+
+            totalSlides = images.length;
+
+            // 현재 슬라이드 비활성화
+            images[currentSlideIndex].classList.remove('active');
+            dots[currentSlideIndex].classList.remove('active');
+
+            // 새 인덱스 계산
+            currentSlideIndex += direction;
+
+            // 순환 처리
+            if (currentSlideIndex >= totalSlides) {
+                currentSlideIndex = 0;
+            } else if (currentSlideIndex < 0) {
+                currentSlideIndex = totalSlides - 1;
+            }
+
+            // 새 슬라이드 활성화
+            images[currentSlideIndex].classList.add('active');
+            dots[currentSlideIndex].classList.add('active');
+
+            // 카운터 업데이트
+            if (counter) {
+                counter.textContent = `${currentSlideIndex + 1} / ${totalSlides}`;
+            }
+        };
+
+        // 특정 슬라이드로 이동
+        window.goToSlide = function (index) {
+            const images = document.querySelectorAll('.slider-image');
+            const dots = document.querySelectorAll('.dot');
+            const counter = document.querySelector('.image-counter');
+
+            if (images.length === 0 || index < 0 || index >= images.length) return;
+
+            // 현재 슬라이드 비활성화
+            images[currentSlideIndex].classList.remove('active');
+            dots[currentSlideIndex].classList.remove('active');
+
+            // 새 슬라이드 활성화
+            currentSlideIndex = index;
+            images[currentSlideIndex].classList.add('active');
+            dots[currentSlideIndex].classList.add('active');
+
+            // 카운터 업데이트
+            if (counter) {
+                counter.textContent = `${currentSlideIndex + 1} / ${images.length}`;
+            }
+        };
+
+        // 페이지 로드 후 초기화
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('페이지 로드 완료, 모달 초기화 시작');
+
+            // PostDetailModal 인스턴스 생성
+            if (typeof PostDetailModal !== 'undefined') {
+                window.postDetailModal = new PostDetailModal();
+                console.log('PostDetailModal 초기화 완료');
+            } else {
+                console.error('PostDetailModal 클래스를 찾을 수 없습니다');
+            }
+
+            // 개선된 좋아요 함수를 전역으로 등록 (토글 기능)
+            window.likePost = async function (postId) {
+                console.log('좋아요 버튼 클릭:', postId);
+                try {
+                    const response = await fetch(`/api/post/${postId}/like`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    console.log('좋아요 응답:', data);
+
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            alert('로그인이 필요합니다.');
+                            window.location.href = '/login';
+                            return;
+                        }
+                        throw new Error(data.error || '좋아요 처리에 실패했습니다.');
+                    }
+
+                    if (data.success) {
+                        // 검색 결과 페이지의 좋아요 버튼들 업데이트
+                        const likeButtons = document.querySelectorAll(`[data-post-id="${postId}"]`);
+                        likeButtons.forEach(btn => {
+                            if (btn.classList.contains('like-btn')) {
+                                btn.innerHTML = `❤️ ${data.likes}`;
+                            }
+                        });
+
+                        // 토글 상태에 따른 메시지
+                        const message = data.user_liked ? '좋아요를 눌렀습니다!' : '좋아요를 취소했습니다.';
+
+                        // 간단한 토스트 메시지 (선택사항)
+                        showToast(message);
+                    } else {
+                        alert(data.error || '좋아요 처리에 실패했습니다.');
+                    }
+                } catch (error) {
+                    console.error('좋아요 처리 오류:', error);
+                    alert(error.message || '네트워크 오류가 발생했습니다.');
+                }
+            };
+
+            // 간단한 토스트 메시지 함수
+            window.showToast = function (message) {
+                // 기존 토스트가 있으면 제거
+                const existingToast = document.querySelector('.toast-message');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+
+                const toast = document.createElement('div');
+                toast.className = 'toast-message';
+                toast.textContent = message;
+
+                // 토스트 스타일
+                Object.assign(toast.style, {
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    background: '#333',
+                    color: '#fff',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    zIndex: '9999',
+                    opacity: '0',
+                    transform: 'translateY(-20px)',
+                    transition: 'all 0.3s ease'
+                });
+
+                document.body.appendChild(toast);
+
+                // 애니메이션으로 나타내기
+                setTimeout(() => {
+                    toast.style.opacity = '1';
+                    toast.style.transform = 'translateY(0)';
+                }, 10);
+
+                // 3초 후 제거
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-20px)';
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }, 3000);
+            };
+
+            // 자세히 버튼 클릭 이벤트 추가 (이벤트 위임)
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('detail-btn')) {
+                    console.log('자세히 버튼 클릭됨');
+                    const postId = e.target.dataset.postId;
+                    console.log('포스트 ID:', postId);
+
+                    if (postId && window.postDetailModal) {
+                        currentSlideIndex = 0; // 슬라이더 인덱스 초기화
+                        window.postDetailModal.showPostDetail(postId);
+                    } else {
+                        console.error('포스트 ID가 없거나 모달이 초기화되지 않았습니다');
+                        alert('게시물 정보를 불러올 수 없습니다.');
+                    }
+                }
+            });
+
+            // 키보드 이벤트 (좌우 화살표로 슬라이드 변경)
+            document.addEventListener('keydown', function (e) {
+                if (document.querySelector('.modal.show .image-slider')) {
+                    if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        changeSlide(-1);
+                    } else if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        changeSlide(1);
+                    }
+                }
+            });
+
+            console.log('모든 이벤트 리스너 등록 완료');
+        });
+    </script>
+</body>
+
+</html>
