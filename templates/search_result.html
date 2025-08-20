@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>밥상뒤엎 – 검색 결과</title>
+    <title>밥상뒤엎 — 검색 결과</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;500;700&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/search_result.css') }}">
@@ -14,7 +14,7 @@
     <header>
         <a class="brand" href="/">밥상뒤엎</a>
         <form class="search" id="searchForm" role="search">
-            <input id="q" name="q" placeholder="레시피 검색" />
+            <input id="q" name="q" placeholder="레시피 검색" maxlength="30" />
             <button class="btn" type="submit">검색</button>
         </form>
     </header>

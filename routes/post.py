@@ -101,6 +101,9 @@ def create_post():
     if not title:
         return jsonify(ok=False, message="제목은 필수입니다."), 400
 
+    if len(title) > 30:
+        return jsonify(ok=False, message="제목은 30자 이내로 입력해 주세요."), 400
+
     servings = _to_int(form.get("servings"), default=1, min_value=1)
     cook_time = _to_int(form.get("time"), default=0, min_value=0)
     level = (form.get("level") or "하").strip()

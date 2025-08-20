@@ -213,13 +213,23 @@ main {
     gap: 20px;
 }
 
+.recipes-grid .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 .recipe-card {
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 12px;
     overflow: hidden;
     transition: all 0.2s ease;
-    cursor: pointer;
 }
 
 .recipe-card:hover {
@@ -236,6 +246,7 @@ main {
     justify-content: center;
     font-size: 48px;
     color: #6c757d;
+    cursor: pointer;
 }
 
 .recipe-image img {
@@ -254,6 +265,11 @@ main {
     margin-bottom: 8px;
     color: var(--ink);
     line-height: 1.3;
+    cursor: pointer;
+}
+
+.recipe-title:hover {
+    color: #667eea;
 }
 
 .recipe-meta {
@@ -278,6 +294,49 @@ main {
     gap: 4px;
     color: #ef4444;
     font-weight: 600;
+}
+
+.recipe-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.action-btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f8f9fa;
+}
+
+.delete-btn {
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.delete-btn:hover {
+    background: #fef2f2;
+    border-color: #f87171;
+}
+
+.unlike-btn {
+    border-color: #fed7d7;
+    color: #e53e3e;
+}
+
+.unlike-btn:hover {
+    background: #fff5f5;
+    border-color: #fc8181;
 }
 
 /* Loading & Empty States */

@@ -1,4 +1,4 @@
-// mypage.js - 마이페이지 기능
+// mypage.js - 마이페이지 기능 (클릭 이동 제거)
 document.addEventListener('DOMContentLoaded', function() {
     const tabs = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 레시피 목록 렌더링
+    // 레시피 목록 렌더링 (클릭 이벤트 제거)
     function renderRecipes(recipes, container, type) {
         if (recipes.length === 0) {
             showEmpty(container, type);
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         container.innerHTML = recipes.map(recipe => `
-            <div class="recipe-card" onclick="viewRecipe('${recipe._id}')">
+            <div class="recipe-card" data-recipe-id="${recipe._id}">
                 <div class="recipe-image">
                     ${recipe.image_url ? 
                         `<img src="${recipe.image_url}" alt="${recipe.title}" onerror="this.parentNode.innerHTML='🍽️'">` : 
@@ -98,6 +98,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         `<div style="margin-top: 8px; font-size: 12px; color: #6b6b6b;">by ${escapeHtml(recipe.author_name)}</div>` : 
                         ''
                     }
+                    <div class="recipe-actions">
+                        ${type === 'my' ? 
+                            `<button class="action-btn delete-btn" onclick="deleteRecipe('${recipe._id}', event)">삭제</button>` :
+                            `<button class="action-btn unlike-btn" onclick="unlikeRecipe('${recipe._id}', event)">좋아요 취소</button>`
+                        }
+                    </div>
                 </div>
             </div>
         `).join('');
@@ -140,10 +146,93 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // 레시피 상세보기
-    window.viewRecipe = function(recipeId) {
-        window.location.href = `/search_result?q=&recipe_id=${recipeId}`;
+    // 내 레시피 삭제
+    window.deleteRecipe = async function(recipeId, event) {
+        event.stopPropagation(); // 카드 클릭 이벤트 방지
+        
+        if (!confirm('정말로 이 레시피를 삭제하시겠습니까?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/delete-recipe/${recipeId}`, {
+                method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 화면에서 해당 카드 제거
+                const recipeCard = document.querySelector(`[data-recipe-id="${recipeId}"]`);
+                if (recipeCard) {
+                    recipeCard.remove();
+                }
+                
+                // 통계 업데이트 (페이지 새로고침 없이)
+                updateStats();
+                
+                alert('레시피가 삭제되었습니다.');
+            } else {
+                alert(data.error || '레시피 삭제에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('레시피 삭제 오류:', error);
+            alert('네트워크 오류가 발생했습니다.');
+        }
     };
+
+    // 좋아요 취소
+    window.unlikeRecipe = async function(recipeId, event) {
+        event.stopPropagation(); // 카드 클릭 이벤트 방지
+        
+        if (!confirm('좋아요를 취소하시겠습니까?')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/unlike-recipe/${recipeId}`, {
+                method: 'POST'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 화면에서 해당 카드 제거
+                const recipeCard = document.querySelector(`[data-recipe-id="${recipeId}"]`);
+                if (recipeCard) {
+                    recipeCard.remove();
+                }
+                
+                // 통계 업데이트
+                updateStats();
+                
+                alert('좋아요를 취소했습니다.');
+            } else {
+                alert(data.error || '좋아요 취소에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('좋아요 취소 오류:', error);
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    };
+
+    // 통계 업데이트 함수
+    async function updateStats() {
+        try {
+            // 현재 화면의 카드 개수로 간단히 업데이트
+            const myRecipesCount = document.querySelectorAll('#my-recipes .recipe-card').length;
+            const likedRecipesCount = document.querySelectorAll('#liked-recipes .recipe-card').length;
+            
+            const myCountEl = document.querySelector('.stat-card:first-child .stat-number');
+            const likedCountEl = document.querySelector('.stat-card:last-child .stat-number');
+            
+            if (myCountEl) myCountEl.textContent = myRecipesCount;
+            if (likedCountEl) likedCountEl.textContent = likedRecipesCount;
+            
+        } catch (error) {
+            console.error('통계 업데이트 오류:', error);
+        }
+    }
 
     // HTML 이스케이프
     function escapeHtml(text) {

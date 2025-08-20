@@ -16,7 +16,7 @@ app.register_blueprint(sign_bp)
 app.register_blueprint(login_bp)
 app.register_blueprint(post_bp)
 app.register_blueprint(search_bp)
-app.register_blueprint(post_detail_bp)  # 추가
+app.register_blueprint(post_detail_bp)
 app.register_blueprint(mypage_bp)
 
 @app.route("/")
@@ -47,8 +47,13 @@ def search_result_page():
 @app.route("/post")
 def recipe_writing_page():
     if "user_id" not in session:
-        return redirect(url_for("login.login_page"))
+        return redirect(url_for("login_page")) 
     return render_template("post.html")
+
+# 정적 파일 서빙을 위한 업로드 폴더 설정
+import os
+UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5004, debug=True)
