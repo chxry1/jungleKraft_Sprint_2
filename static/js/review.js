@@ -1,9 +1,10 @@
-// static/js/review.js - 수정된 리뷰 시스템
+// static/js/review.js - 별점 문제 완전 해결 버전
 class ReviewSystem {
     constructor() {
         this.currentPostId = null;
         this.myReview = null;
-        this.currentContainer = null; // 현재 컨테이너 참조 저장
+        this.currentContainer = null;
+        this.currentRating = 0;
         this.initEventListeners();
     }
 
@@ -22,11 +23,23 @@ class ReviewSystem {
                 this.deleteReview(reviewId);
             }
         });
+
+        document.addEventListener('mouseover', (e) => {
+            if (e.target.classList.contains('star') && e.target.closest('.star-rating')) {
+                this.handleStarHover(e.target);
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.classList.contains('star') && e.target.closest('.star-rating')) {
+                this.resetStarDisplay();
+            }
+        });
     }
 
     async renderReviewSection(postId, container) {
         this.currentPostId = postId;
-        this.currentContainer = container; // 컨테이너 참조 저장
+        this.currentContainer = container;
         
         try {
             const [reviewsData, myReviewData] = await Promise.all([
@@ -40,7 +53,7 @@ class ReviewSystem {
             container.innerHTML = reviewHTML;
             
             if (this.myReview) {
-                // 약간의 지연 후 별점 설정 (DOM이 완전히 렌더링된 후)
+                this.currentRating = this.myReview.rating;
                 setTimeout(() => {
                     this.setStarRating(this.myReview.rating);
                 }, 100);
@@ -71,10 +84,13 @@ class ReviewSystem {
 
                 <div class="review-form">
                     <h4>${myReview ? '내 리뷰 수정' : '리뷰 작성하기'}</h4>
-                    <div class="star-rating">
-                        ${[1, 2, 3, 4, 5].map(i => 
-                            `<span class="star" data-rating="${i}">☆</span>`
-                        ).join('')}
+                    <div class="star-rating-container">
+                        <div class="star-rating">
+                            ${[1, 2, 3, 4, 5].map(i => 
+                                `<span class="star interactive-star" data-rating="${i}"></span>`
+                            ).join('')}
+                        </div>
+                        <span class="rating-text">별점을 선택해주세요</span>
                     </div>
                     <textarea 
                         id="reviewComment" 
@@ -109,16 +125,13 @@ class ReviewSystem {
 
     generateStarsDisplay(rating) {
         const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 >= 0.5;
         let stars = '';
         
         for (let i = 1; i <= 5; i++) {
             if (i <= fullStars) {
-                stars += '<span class="star filled">★</span>';
-            } else if (i === fullStars + 1 && hasHalfStar) {
-                stars += '<span class="star half">★</span>';
+                stars += '<span class="star display-star filled"></span>';
             } else {
-                stars += '<span class="star empty">☆</span>';
+                stars += '<span class="star display-star empty"></span>';
             }
         }
         
@@ -127,31 +140,58 @@ class ReviewSystem {
 
     handleStarClick(starElement) {
         const rating = parseInt(starElement.dataset.rating);
+        this.currentRating = rating;
         this.setStarRating(rating);
+        this.updateRatingText(rating);
+    }
+
+    handleStarHover(starElement) {
+        const rating = parseInt(starElement.dataset.rating);
+        this.highlightStars(rating);
     }
 
     setStarRating(rating) {
-        const stars = document.querySelectorAll('.star-rating .star');
+        const stars = document.querySelectorAll('.star-rating .interactive-star');
         stars.forEach((star, index) => {
+            star.classList.remove('selected', 'hover');
+            
             if (index < rating) {
                 star.classList.add('selected');
-                star.textContent = '★';
-            } else {
-                star.classList.remove('selected');
-                star.textContent = '☆';
+            }
+        });
+        this.currentRating = rating;
+    }
+
+    highlightStars(rating) {
+        const stars = document.querySelectorAll('.star-rating .interactive-star');
+        stars.forEach((star, index) => {
+            star.classList.remove('hover');
+            
+            if (index < rating) {
+                star.classList.add('hover');
             }
         });
     }
 
+    resetStarDisplay() {
+        this.setStarRating(this.currentRating);
+    }
+
+    updateRatingText(rating) {
+        const ratingText = document.querySelector('.rating-text');
+        if (ratingText) {
+            const texts = ['', '별로예요', '그저그래요', '좋아요', '훌륭해요', '최고예요'];
+            ratingText.textContent = texts[rating] || '별점을 선택해주세요';
+        }
+    }
+
     async submitReview() {
-        const selectedStars = document.querySelectorAll('.star-rating .star.selected');
-        const rating = selectedStars.length;
-        const comment = document.getElementById('reviewComment').value.trim();
-        
-        if (rating === 0) {
+        if (this.currentRating === 0) {
             alert('별점을 선택해주세요.');
             return;
         }
+        
+        const comment = document.getElementById('reviewComment').value.trim();
         
         try {
             const response = await fetch('/api/review', {
@@ -161,7 +201,7 @@ class ReviewSystem {
                 },
                 body: JSON.stringify({
                     post_id: this.currentPostId,
-                    rating: rating,
+                    rating: this.currentRating,
                     comment: comment
                 })
             });
@@ -170,7 +210,6 @@ class ReviewSystem {
             
             if (response.ok && data.success) {
                 alert(data.message);
-                // 저장된 컨테이너 참조를 사용하여 새로고침
                 if (this.currentContainer) {
                     await this.renderReviewSection(this.currentPostId, this.currentContainer);
                 }
@@ -198,7 +237,6 @@ class ReviewSystem {
             
             if (response.ok && data.success) {
                 alert(data.message);
-                // 저장된 컨테이너 참조를 사용하여 새로고침
                 if (this.currentContainer) {
                     await this.renderReviewSection(this.currentPostId, this.currentContainer);
                 }

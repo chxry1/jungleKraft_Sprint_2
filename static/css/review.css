@@ -1,4 +1,4 @@
-/* static/css/review.css - 수정된 리뷰 시스템 스타일 */
+/* static/css/review.css - 별점 박스 문제 완전 해결 버전 */
 
 /* 리뷰 섹션 전체 */
 .review-section {
@@ -39,59 +39,85 @@
     color: #667eea;
 }
 
-/* 별점 스타일 - 수정된 부분 */
+/* 별점 컨테이너 */
+.star-rating-container {
+    margin: 16px 0;
+    text-align: center;
+}
+
+.rating-text {
+    display: block;
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+/* 별점 기본 스타일 - 박스 완전 제거 */
 .star-rating {
-    margin: 12px 0;
-    display: flex;
-    gap: 4px;
+    display: inline-flex;
+    gap: 8px;
+    margin-bottom: 8px;
     align-items: center;
+    justify-content: center;
 }
 
 .star {
-    font-size: 28px;
-    color: #ddd;
+    display: inline-block;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-size: 32px;
     line-height: 1;
-    user-select: none;
-    display: inline-block;
-    width: auto;
-    height: auto;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    outline: none;
 }
 
-.star:hover {
+.star::before {
+    content: '☆';
+    color: #ddd;
+    transition: all 0.2s ease;
+}
+
+/* 상호작용 별 (클릭 가능) */
+.interactive-star::before {
+    color: #ddd;
+}
+
+.interactive-star.selected::before {
+    content: '★';
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.interactive-star:hover::before {
+    color: #FFA500;
     transform: scale(1.1);
 }
 
-.star.selected,
-.star.filled {
-    color: #ffc107;
-}
-
-.star.half {
-    color: #ffc107;
-    position: relative;
-}
-
-.stars-display {
-    display: flex;
-    gap: 2px;
-    align-items: center;
-}
-
-.stars-display .star {
+/* 표시용 별 */
+.display-star {
     font-size: 16px;
     cursor: default;
-    margin: 0;
-    line-height: 1;
 }
 
-.stars-display .filled {
-    color: #ffc107;
+.display-star.filled::before {
+    content: '★';
+    color: #FFD700;
 }
 
-.stars-display .empty {
-    color: #e0e0e0;
+.display-star.empty::before {
+    content: '☆';
+    color: #ddd;
+}
+
+/* 표시용 별들 컨테이너 */
+.stars-display {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
 }
 
 /* 리뷰 작성 폼 */
@@ -299,37 +325,6 @@
     }
 
     .star {
-        font-size: 24px;
-    }
-}
-
-/* 다크모드 대응 (선택사항) */
-@media (prefers-color-scheme: dark) {
-    .review-form {
-        background: linear-gradient(135deg, #1a1d2e 0%, #16213e 100%);
-        border-color: #2d3748;
-    }
-
-    .review-form h4 {
-        color: #e2e8f0;
-    }
-
-    .review-form textarea {
-        background: #2d3748;
-        border-color: #4a5568;
-        color: #e2e8f0;
-    }
-
-    .review-item {
-        background: #2d3748;
-        border-color: #4a5568;
-    }
-
-    .reviewer-name {
-        color: #e2e8f0;
-    }
-
-    .review-comment {
-        color: #cbd5e0;
+        font-size: 28px;
     }
 }
