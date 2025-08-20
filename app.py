@@ -1,5 +1,8 @@
 from flask import Flask, render_template, session, redirect, url_for
 from datetime import timedelta
+from dotenv import load_dotenv
+load_dotenv()
+import os
 from routes.sign import sign_bp  
 from routes.login import login_bp
 from routes.post import post_bp
@@ -7,10 +10,11 @@ from routes.search import search_bp
 from routes.post_detail import post_detail_bp  
 from routes.mypage import mypage_bp
 from routes.review import review_bp  # 리뷰 시스템 추가
+from routes.chatbot import chatbot_bp #chatbot 시스템 추가
 
 app = Flask(__name__)
 app.secret_key = "dlehddnrWKdWKdaos"    # 비밀키 입니다 #
-app.permanent_session_lifetime = timedelta(days=1) # 로그인 유지 기간 ( 하루 )
+app.permanent_session_lifetime = timedelta(days=1) # 로그인 유지 기간 ( 하루 )  
 
 # 블루프린트 등록
 app.register_blueprint(sign_bp)
@@ -20,6 +24,7 @@ app.register_blueprint(search_bp)
 app.register_blueprint(post_detail_bp)
 app.register_blueprint(mypage_bp)
 app.register_blueprint(review_bp)  # 리뷰 시스템 추가
+app.register_blueprint(chatbot_bp)
 
 @app.route("/")
 def home():

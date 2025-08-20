@@ -77,6 +77,41 @@
             window.location.href = `/search_result?q=${encodeURIComponent(keyword)}`;
         }
     </script>
+    <!-- 챗봇 위젯 전체 -->
+    <div id="chatbot-widget">
+        <!-- 챗봇 버튼 -->
+        <button class="chatbot-button" id="chatbotButton">🍚</button>
+
+        <!-- 챗봇 창 -->
+        <div class="chatbot-window" id="chatbotWindow">
+            <div class="chatbot-header">
+                <div class="chatbot-avatar">🍚</div>
+                <div class="chatbot-title">밥심이</div>
+                <button class="chatbot-close" id="chatbotClose">&times;</button>
+            </div>
+
+            <div class="chatbot-messages" id="chatbotMessages">
+                <div class="message bot">
+                    안녕하세요! 저는 밥심이예요. 레시피나 요리에 관해 무엇이든 물어보세요! 🍳
+                </div>
+            </div>
+
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+
+            <div class="chatbot-input">
+                <input type="text" id="chatbotInput" placeholder="요리나 레시피에 대해 질문해보세요..." maxlength="200">
+                <button class="chatbot-send" id="chatbotSend">전송</button>
+            </div>
+        </div>
+    </div>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css') }}">
+    <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
 </body>
 
 </html>
