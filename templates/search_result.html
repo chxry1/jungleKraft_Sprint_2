@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard:wght@400;500;700&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/search_result.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/review.css') }}">
 </head>
 
 <body>
@@ -65,13 +66,14 @@
 
     <!-- JavaScript 파일 포함 -->
     <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/review.js') }}"></script>
     <script src="{{ url_for('static', filename='js/post_detail.js') }}"></script>
     <script>
-        // 이미지 슬라이더 전역 변수
+        // 전역 변수들
         let currentSlideIndex = 0;
         let totalSlides = 0;
 
-        // 슬라이드 변경 함수
+        // 슬라이드 관련 함수들
         window.changeSlide = function (direction) {
             const images = document.querySelectorAll('.slider-image');
             const dots = document.querySelectorAll('.dot');
@@ -80,32 +82,25 @@
             if (images.length === 0) return;
 
             totalSlides = images.length;
-
-            // 현재 슬라이드 비활성화
             images[currentSlideIndex].classList.remove('active');
             dots[currentSlideIndex].classList.remove('active');
 
-            // 새 인덱스 계산
             currentSlideIndex += direction;
 
-            // 순환 처리
             if (currentSlideIndex >= totalSlides) {
                 currentSlideIndex = 0;
             } else if (currentSlideIndex < 0) {
                 currentSlideIndex = totalSlides - 1;
             }
 
-            // 새 슬라이드 활성화
             images[currentSlideIndex].classList.add('active');
             dots[currentSlideIndex].classList.add('active');
 
-            // 카운터 업데이트
             if (counter) {
                 counter.textContent = `${currentSlideIndex + 1} / ${totalSlides}`;
             }
         };
 
-        // 특정 슬라이드로 이동
         window.goToSlide = function (index) {
             const images = document.querySelectorAll('.slider-image');
             const dots = document.querySelectorAll('.dot');
@@ -113,16 +108,13 @@
 
             if (images.length === 0 || index < 0 || index >= images.length) return;
 
-            // 현재 슬라이드 비활성화
             images[currentSlideIndex].classList.remove('active');
             dots[currentSlideIndex].classList.remove('active');
 
-            // 새 슬라이드 활성화
             currentSlideIndex = index;
             images[currentSlideIndex].classList.add('active');
             dots[currentSlideIndex].classList.add('active');
 
-            // 카운터 업데이트
             if (counter) {
                 counter.textContent = `${currentSlideIndex + 1} / ${images.length}`;
             }
@@ -130,7 +122,7 @@
 
         // 페이지 로드 후 초기화
         document.addEventListener('DOMContentLoaded', function () {
-            console.log('페이지 로드 완료, 모달 초기화 시작');
+            console.log('페이지 로드 완료, 초기화 시작');
 
             // PostDetailModal 인스턴스 생성
             if (typeof PostDetailModal !== 'undefined') {
@@ -140,7 +132,7 @@
                 console.error('PostDetailModal 클래스를 찾을 수 없습니다');
             }
 
-            // 개선된 좋아요 함수를 전역으로 등록 (토글 기능)
+            // 좋아요 함수 등록
             window.likePost = async function (postId) {
                 console.log('좋아요 버튼 클릭:', postId);
                 try {
@@ -164,7 +156,6 @@
                     }
 
                     if (data.success) {
-                        // 검색 결과 페이지의 좋아요 버튼들 업데이트
                         const likeButtons = document.querySelectorAll(`[data-post-id="${postId}"]`);
                         likeButtons.forEach(btn => {
                             if (btn.classList.contains('like-btn')) {
@@ -172,10 +163,7 @@
                             }
                         });
 
-                        // 토글 상태에 따른 메시지
                         const message = data.user_liked ? '좋아요를 눌렀습니다!' : '좋아요를 취소했습니다.';
-
-                        // 간단한 토스트 메시지 (선택사항)
                         showToast(message);
                     } else {
                         alert(data.error || '좋아요 처리에 실패했습니다.');
@@ -186,9 +174,8 @@
                 }
             };
 
-            // 간단한 토스트 메시지 함수
+            // 토스트 메시지 함수
             window.showToast = function (message) {
-                // 기존 토스트가 있으면 제거
                 const existingToast = document.querySelector('.toast-message');
                 if (existingToast) {
                     existingToast.remove();
@@ -198,7 +185,6 @@
                 toast.className = 'toast-message';
                 toast.textContent = message;
 
-                // 토스트 스타일
                 Object.assign(toast.style, {
                     position: 'fixed',
                     top: '20px',
@@ -217,13 +203,11 @@
 
                 document.body.appendChild(toast);
 
-                // 애니메이션으로 나타내기
                 setTimeout(() => {
                     toast.style.opacity = '1';
                     toast.style.transform = 'translateY(0)';
                 }, 10);
 
-                // 3초 후 제거
                 setTimeout(() => {
                     toast.style.opacity = '0';
                     toast.style.transform = 'translateY(-20px)';
@@ -235,7 +219,7 @@
                 }, 3000);
             };
 
-            // 자세히 버튼 클릭 이벤트 추가 (이벤트 위임)
+            // 자세히 버튼 클릭 이벤트
             document.addEventListener('click', function (e) {
                 if (e.target.classList.contains('detail-btn')) {
                     console.log('자세히 버튼 클릭됨');
@@ -243,7 +227,7 @@
                     console.log('포스트 ID:', postId);
 
                     if (postId && window.postDetailModal) {
-                        currentSlideIndex = 0; // 슬라이더 인덱스 초기화
+                        currentSlideIndex = 0;
                         window.postDetailModal.showPostDetail(postId);
                     } else {
                         console.error('포스트 ID가 없거나 모달이 초기화되지 않았습니다');
@@ -252,7 +236,7 @@
                 }
             });
 
-            // 키보드 이벤트 (좌우 화살표로 슬라이드 변경)
+            // 키보드 이벤트
             document.addEventListener('keydown', function (e) {
                 if (document.querySelector('.modal.show .image-slider')) {
                     if (e.key === 'ArrowLeft') {

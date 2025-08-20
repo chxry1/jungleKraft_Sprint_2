@@ -6,6 +6,7 @@ from routes.post import post_bp
 from routes.search import search_bp
 from routes.post_detail import post_detail_bp  
 from routes.mypage import mypage_bp
+from routes.review import review_bp  # 리뷰 시스템 추가
 
 app = Flask(__name__)
 app.secret_key = "dlehddnrWKdWKdaos"    # 비밀키 입니다 #
@@ -18,6 +19,7 @@ app.register_blueprint(post_bp)
 app.register_blueprint(search_bp)
 app.register_blueprint(post_detail_bp)
 app.register_blueprint(mypage_bp)
+app.register_blueprint(review_bp)  # 리뷰 시스템 추가
 
 @app.route("/")
 def home():
@@ -47,7 +49,7 @@ def search_result_page():
 @app.route("/post")
 def recipe_writing_page():
     if "user_id" not in session:
-        return redirect(url_for("login_page")) 
+        return redirect(url_for("login_page"))
     return render_template("post.html")
 
 # 정적 파일 서빙을 위한 업로드 폴더 설정
@@ -56,4 +58,4 @@ UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5004, debug=True)
+    app.run(host="0.0.0.0", port=5004, debug=False, threaded=True)

@@ -1,4 +1,4 @@
-// post_detail.js - 레시피 상세보기 모달 관리 (조회수 제거, 단일 이미지)
+// static/js/post_detail.js - 레시피 상세보기 모달 관리 (리뷰 시스템 통합)
 
 class PostDetailModal {
     constructor() {
@@ -12,7 +12,6 @@ class PostDetailModal {
     }
 
     initEventListeners() {
-        // 자세히 버튼 클릭 이벤트 (이벤트 위임 사용)
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('detail-btn')) {
                 const postId = e.target.dataset.postId;
@@ -20,13 +19,10 @@ class PostDetailModal {
             }
         });
 
-        // 모달 닫기 이벤트들
         this.closeBtn.addEventListener('click', () => this.closeModal());
         
-        // 백드롭 클릭으로 닫기
         this.modal.querySelector('.modal-backdrop').addEventListener('click', () => this.closeModal());
         
-        // ESC 키로 닫기
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.modal.classList.contains('show')) {
                 this.closeModal();
@@ -40,12 +36,10 @@ class PostDetailModal {
             return;
         }
 
-        // 모달 열기 및 로딩 상태 표시
         this.openModal();
         this.showLoading();
 
         try {
-            // 서버에서 게시물 상세 정보 가져오기
             const response = await fetch(`/api/post/${postId}`);
             
             if (!response.ok) {
@@ -58,7 +52,6 @@ class PostDetailModal {
             const post = await response.json();
             this.currentPostData = post;
             
-            // 모달에 상세 내용 표시
             this.renderPostDetail(post);
             
         } catch (error) {
@@ -70,13 +63,13 @@ class PostDetailModal {
     openModal() {
         this.modal.style.display = 'flex';
         this.modal.classList.add('show');
-        document.body.style.overflow = 'hidden'; // 배경 스크롤 방지
+        document.body.style.overflow = 'hidden';
     }
 
     closeModal() {
         this.modal.style.display = 'none';
         this.modal.classList.remove('show');
-        document.body.style.overflow = 'auto'; // 배경 스크롤 복원
+        document.body.style.overflow = 'auto';
         this.currentPostData = null;
     }
 
@@ -90,17 +83,20 @@ class PostDetailModal {
     }
 
     renderPostDetail(post) {
-        // 모달 제목 설정
         this.modalTitle.textContent = post.title;
 
-        // 상세 내용 HTML 생성
         const detailHTML = this.createDetailHTML(post);
         this.modalBody.innerHTML = detailHTML;
 
-        // 좋아요 버튼 이벤트 바인딩
         const likeBtn = this.modalBody.querySelector('.detail-like-btn');
         if (likeBtn) {
             likeBtn.addEventListener('click', () => this.handleLike(post._id));
+        }
+
+        // 리뷰 섹션 렌더링
+        const reviewSection = this.modalBody.querySelector('#reviewSection');
+        if (reviewSection && window.reviewSystem) {
+            window.reviewSystem.renderReviewSection(post._id, reviewSection);
         }
     }
 
@@ -125,7 +121,6 @@ class PostDetailModal {
             }
             
             if (data.success) {
-                // 모달 내 좋아요 버튼 업데이트
                 const likeBtn = this.modalBody.querySelector('.detail-like-btn');
                 if (likeBtn) {
                     likeBtn.innerHTML = `❤️ ${data.likes}`;
@@ -136,13 +131,11 @@ class PostDetailModal {
                     }
                 }
                 
-                // 검색 결과 페이지의 좋아요 버튼들도 업데이트
                 const searchPageLikeBtns = document.querySelectorAll(`[data-post-id="${postId}"].like-btn`);
                 searchPageLikeBtns.forEach(btn => {
                     btn.innerHTML = `❤️ ${data.likes}`;
                 });
                 
-                // 현재 포스트 데이터 업데이트
                 if (this.currentPostData) {
                     this.currentPostData.likes = data.likes;
                     this.currentPostData.user_liked = data.user_liked;
@@ -171,29 +164,26 @@ class PostDetailModal {
             likes = 0,
             image_url,
             created_at,
-            user_liked = false
+            user_liked = false,
+            avg_rating = 0,
+            review_count = 0
         } = post;
 
-        // 날짜 포맷팅
         const createdDate = created_at ? 
             new Date(created_at.$date || created_at).toLocaleDateString('ko-KR') : '';
 
-        // 이미지 HTML 생성 (단일 이미지)
         const imageHTML = image_url ? 
             `<img src="${image_url}" alt="${title}" class="detail-image-auto" onerror="this.style.display='none'">` :
             '<div class="detail-image-auto" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); color: #6c757d; font-size: 48px; height: 280px;">🍽️</div>';
 
-        // 태그 HTML
         const tagsHTML = tags.length > 0 ? 
             `<div class="tags">${tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}</div>` : '';
 
-        // 재료 리스트 HTML
         const ingredientsHTML = ingredients.length > 0 ?
             `<ul class="ingredients-list">
                 ${ingredients.map(ingredient => `<li>${this.escapeHtml(ingredient)}</li>`).join('')}
             </ul>` : '<p style="color: #6c757d; font-style: italic;">재료 정보가 없습니다.</p>';
 
-        // 조리과정 HTML
         const stepsHTML = steps.length > 0 ?
             `<ol class="steps-list">
                 ${steps.map((step, index) => `
@@ -207,7 +197,6 @@ class PostDetailModal {
                 `).join('')}
             </ol>` : '<p style="color: #6c757d; font-style: italic;">조리과정 정보가 없습니다.</p>';
 
-        // 좋아요 버튼 상태 설정
         const likeButtonClass = user_liked ? 'detail-like-btn liked' : 'detail-like-btn';
 
         return `
@@ -230,6 +219,12 @@ class PostDetailModal {
                     <div class="detail-meta-label">분류</div>
                     <div class="detail-meta-value">${category || '-'}</div>
                 </div>
+                ${avg_rating > 0 ? `
+                <div class="detail-meta-item">
+                    <div class="detail-meta-label">평점</div>
+                    <div class="detail-meta-value">⭐ ${avg_rating} (${review_count}개)</div>
+                </div>
+                ` : ''}
             </div>
 
             ${desc ? `
@@ -254,6 +249,11 @@ class PostDetailModal {
             <div class="detail-section">
                 <h3>조리과정 (${steps.length}단계)</h3>
                 ${stepsHTML}
+            </div>
+
+            <!-- 리뷰 섹션 추가 -->
+            <div class="detail-section">
+                <div id="reviewSection"></div>
             </div>
 
             <div class="detail-footer">
