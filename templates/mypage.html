@@ -31,10 +31,23 @@
         <div class="profile-section">
             <div class="profile-card">
                 <div class="profile-avatar">
-                    <div class="avatar-circle">{{ user.name[0] }}</div>
+                    <!-- 프로필 이미지가 있으면 표시, 없으면 기본 아바타 또는 기본 이미지 -->
+                    <div id="avatarContainer">
+                        {% if user.get('profile_image_url') %}
+                        <img id="profileImage" src="{{ user.profile_image_url }}" alt="프로필" class="avatar-image">
+                        {% else %}
+                        <img id="profileImage" src="{{ url_for('static', filename='images/default-avatar.png') }}"
+                            alt="기본 프로필" class="avatar-image"
+                            onerror="this.outerHTML='<div class=\'avatar-circle\' id=\'avatarCircle\'>{{ user.name[0] }}</div>'">
+                        {% endif %}
+                    </div>
+                    <button class="edit-avatar-btn" onclick="openProfileModal()" title="프로필 사진 변경">📷</button>
                 </div>
                 <div class="profile-info">
-                    <h1 class="profile-name">{{ user.name }}님</h1>
+                    <div class="name-section">
+                        <h1 class="profile-name" id="profileName">{{ user.get('nickname') or user.name }}님</h1>
+                        <button class="edit-name-btn" onclick="openNicknameModal()" title="닉네임 변경">✏️</button>
+                    </div>
                     <p class="profile-email">{{ user.email }}</p>
                     <p class="profile-joined">가입일: {{ user.created_at.strftime('%Y년 %m월 %d일') if user.created_at else
                         '정보 없음' }}</p>
@@ -75,10 +88,60 @@
         </div>
     </main>
 
+    <!-- 프로필 사진 편집 모달 -->
+    <div class="edit-modal" id="profileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>프로필 사진 변경</h3>
+                <button class="close-btn" onclick="closeProfileModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">새 프로필 사진 선택</label>
+                    <input type="file" id="profileImageInput" class="file-input" accept="image/*"
+                        onchange="previewProfileImage(this)">
+                    <label for="profileImageInput" class="file-input-label">
+                        📁 이미지 파일 선택
+                    </label>
+                    <div id="imagePreview" style="display: none;">
+                        <img id="previewImg" class="preview-image" src="" alt="미리보기">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeProfileModal()">취소</button>
+                <button class="btn-save" id="saveProfileBtn" onclick="saveProfileImage()" disabled>저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 닉네임 편집 모달 -->
+    <div class="edit-modal" id="nicknameModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>닉네임 변경</h3>
+                <button class="close-btn" onclick="closeNicknameModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="nicknameInput">새 닉네임</label>
+                    <input type="text" id="nicknameInput" class="form-input" placeholder="새로운 닉네임을 입력하세요" maxlength="20"
+                        value="{{ user.get('nickname') or user.name }}">
+                    <div class="form-hint">최대 20자까지 입력 가능합니다.</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeNicknameModal()">취소</button>
+                <button class="btn-save" onclick="saveNickname()">저장</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer>ⓒ 밥상뒤엎 — 레시피의 진화가 시작되는 곳</footer>
 
     <script src="{{ url_for('static', filename='js/mypage.js') }}"></script>
+
     <!-- 챗봇 위젯 전체 -->
     <div id="chatbot-widget">
         <!-- 챗봇 버튼 -->

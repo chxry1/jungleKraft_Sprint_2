@@ -54,8 +54,9 @@ def create_review():
         if post.get('author_id') == user_oid:
             return jsonify({'error': '자신의 레시피에는 리뷰를 작성할 수 없습니다'}), 403
         
+        # 사용자 정보에서 닉네임 또는 이름 가져오기
         user = users.find_one({'_id': user_oid})
-        user_name = user.get('name', '익명') if user else '익명'
+        user_name = user.get('nickname') or user.get('name', '익명') if user else '익명'
         
         existing_review = reviews.find_one({'post_id': post_oid, 'user_id': user_oid})
         
@@ -211,3 +212,34 @@ def update_post_rating(post_id):
         
     except Exception as e:
         print(f"게시물 평점 업데이트 오류: {e}")
+
+@review_bp.route('/api/update-review-usernames/<user_id>', methods=['POST'])
+def update_review_usernames(user_id):
+    """특정 사용자의 모든 리뷰에서 사용자명 업데이트 (내부 API)"""
+    try:
+        data = request.get_json()
+        new_username = data.get('new_username')
+        
+        if not new_username:
+            return jsonify({'error': '새 사용자명이 필요합니다'}), 400
+        
+        if not ObjectId.is_valid(user_id):
+            return jsonify({'error': '잘못된 사용자 ID입니다'}), 400
+        
+        user_oid = ObjectId(user_id)
+        
+        # 해당 사용자가 작성한 모든 리뷰의 user_name 업데이트
+        result = reviews.update_many(
+            {'user_id': user_oid},
+            {'$set': {'user_name': new_username}}
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'{result.modified_count}개의 리뷰가 업데이트되었습니다',
+            'modified_count': result.modified_count
+        })
+        
+    except Exception as e:
+        print(f"리뷰 사용자명 업데이트 오류: {e}")
+        return jsonify({'error': '서버 오류가 발생했습니다'}), 500
