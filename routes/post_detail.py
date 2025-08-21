@@ -164,7 +164,7 @@ def toggle_like_post(post_id):
 
 def serialize_post(post):
     """
-    MongoDB 문서를 JSON 직렬화 가능한 형태로 변환 (조회수 제거)
+    MongoDB 문서를 JSON 직렬화 가능한 형태로 변환
     """
     if not post:
         return None
