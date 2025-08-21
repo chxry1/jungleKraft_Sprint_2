@@ -1,4 +1,4 @@
-// static/js/chatbot.js - 드래그 가능한 챗봇 버튼
+// static/js/chatbot.js - 채팅 기록 유지 버전 (role 문제 수정)
 
 class ChatBot {
     constructor() {
@@ -6,6 +6,7 @@ class ChatBot {
         this.isTyping = false;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
+        this.historyLoaded = false;
         
         this.initElements();
         this.initEventListeners();
@@ -69,7 +70,6 @@ class ChatBot {
                 
                 this.endDrag();
                 
-                // 드래그하지 않았고 빠른 클릭이면 토글
                 const timeElapsed = Date.now() - startTime;
                 if (!isDragging && timeElapsed < 200) {
                     this.toggle();
@@ -118,32 +118,29 @@ class ChatBot {
     }
 
     startDrag(clientX, clientY) {
-        this.isDragging = false; // 일단 false로 시작
+        this.isDragging = false;
         
         const rect = this.button.getBoundingClientRect();
         this.dragOffset.x = clientX - rect.left;
         this.dragOffset.y = clientY - rect.top;
         
-        // 드래그 시작 시 애니메이션 제거
         this.button.style.transition = 'none';
         this.button.style.cursor = 'grabbing';
     }
 
     drag(clientX, clientY) {
-        this.isDragging = true; // 실제로 움직이기 시작하면 true
+        this.isDragging = true;
         
         const newX = clientX - this.dragOffset.x;
         const newY = clientY - this.dragOffset.y;
         
-        // 화면 경계 체크
-        const buttonSize = 60; // 버튼 크기
+        const buttonSize = 60;
         const maxX = window.innerWidth - buttonSize;
         const maxY = window.innerHeight - buttonSize;
         
         const boundedX = Math.max(0, Math.min(newX, maxX));
         const boundedY = Math.max(0, Math.min(newY, maxY));
         
-        // 절대 위치로 설정
         this.button.style.position = 'fixed';
         this.button.style.left = boundedX + 'px';
         this.button.style.top = boundedY + 'px';
@@ -152,14 +149,11 @@ class ChatBot {
     }
 
     endDrag() {
-        // 드래그 종료 후 애니메이션 복원
         this.button.style.transition = 'all 0.3s ease';
         this.button.style.cursor = 'pointer';
         
-        // 화면 가장자리에 스냅
         this.snapToEdge();
         
-        // 잠시 후 드래그 상태 리셋
         setTimeout(() => {
             this.isDragging = false;
         }, 100);
@@ -173,7 +167,6 @@ class ChatBot {
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
         
-        // 가장 가까운 가장자리 찾기
         const distances = {
             left: centerX,
             right: windowWidth - centerX,
@@ -184,7 +177,6 @@ class ChatBot {
         const minDistance = Math.min(...Object.values(distances));
         const closestEdge = Object.keys(distances).find(key => distances[key] === minDistance);
         
-        // 가장자리에 스냅
         const margin = 20;
         
         switch (closestEdge) {
@@ -211,10 +203,17 @@ class ChatBot {
         }
     }
 
-    open() {
+    async open() {
         if (this.window) {
             this.window.classList.add('open');
             this.isOpen = true;
+            
+            // 채팅 기록 로드 (처음 열 때만)
+            if (!this.historyLoaded) {
+                await this.loadChatHistory();
+                this.historyLoaded = true;
+            }
+            
             if (this.input) {
                 this.input.focus();
             }
@@ -225,6 +224,51 @@ class ChatBot {
         if (this.window) {
             this.window.classList.remove('open');
             this.isOpen = false;
+        }
+    }
+
+    async loadChatHistory() {
+        try {
+            this.showLoadingHistory();
+            
+            const response = await fetch('/api/chatbot/history');
+            const data = await response.json();
+            
+            if (response.ok && data.success && data.messages) {
+                this.clearMessages();
+                
+                // 환영 메시지 먼저 추가
+                this.addMessage('안녕하세요! 저는 밥심이예요. 레시피나 요리에 관해 무엇이든 물어보세요!', 'bot', false);
+                
+                // 기존 채팅 기록 복원 - 핵심 수정 부분
+                data.messages.forEach(msg => {
+                    // 'assistant' role을 'bot'으로 변환해서 표시
+                    const displayRole = msg.role === 'assistant' ? 'bot' : msg.role;
+                    this.addMessage(msg.content, displayRole, false);
+                });
+                
+                this.scrollToBottom();
+            } else {
+                // 기록이 없으면 환영 메시지만 표시
+                this.clearMessages();
+                this.addMessage('안녕하세요! 저는 밥심이예요. 레시피나 요리에 관해 무엇이든 물어보세요!', 'bot', false);
+            }
+        } catch (error) {
+            console.error('채팅 기록 로드 오류:', error);
+            // 오류 시에도 환영 메시지는 표시
+            this.clearMessages();
+            this.addMessage('안녕하세요! 저는 밥심이예요. 레시피나 요리에 관해 무엇이든 물어보세요!', 'bot', false);
+        }
+    }
+
+    showLoadingHistory() {
+        this.clearMessages();
+        this.addMessage('채팅 기록을 불러오는 중...', 'bot', false);
+    }
+
+    clearMessages() {
+        if (this.messages) {
+            this.messages.innerHTML = '';
         }
     }
 
@@ -242,7 +286,11 @@ class ChatBot {
             this.addMessage(response, 'bot');
         } catch (error) {
             this.setTyping(false);
-            this.addMessage('죄송해요, 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'bot');
+            if (error.message.includes('로그인')) {
+                this.addMessage('로그인이 필요합니다. 로그인 후 다시 시도해주세요.', 'bot');
+            } else {
+                this.addMessage('죄송해요, 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'bot');
+            }
             console.error('챗봇 API 오류:', error);
         }
     }
@@ -259,6 +307,9 @@ class ChatBot {
         });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('로그인이 필요합니다');
+            }
             throw new Error(`API 오류: ${response.status}`);
         }
 
@@ -271,7 +322,7 @@ class ChatBot {
         return data.response;
     }
 
-    addMessage(text, type) {
+    addMessage(text, type, scroll = true) {
         if (!this.messages) return;
         
         const messageDiv = document.createElement('div');
@@ -279,7 +330,16 @@ class ChatBot {
         messageDiv.textContent = text;
         
         this.messages.appendChild(messageDiv);
-        this.messages.scrollTop = this.messages.scrollHeight;
+        
+        if (scroll) {
+            this.scrollToBottom();
+        }
+    }
+
+    scrollToBottom() {
+        if (this.messages) {
+            this.messages.scrollTop = this.messages.scrollHeight;
+        }
     }
 
     setTyping(typing) {
@@ -291,8 +351,25 @@ class ChatBot {
             this.typingIndicator.style.display = typing ? 'block' : 'none';
         }
         
-        if (typing && this.messages) {
-            this.messages.scrollTop = this.messages.scrollHeight;
+        if (typing) {
+            this.scrollToBottom();
+        }
+    }
+
+    // 채팅 기록 삭제 (필요시 사용)
+    async clearChatHistory() {
+        try {
+            const response = await fetch('/api/chatbot/clear', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                this.clearMessages();
+                this.addMessage('안녕하세요! 저는 밥심이예요. 레시피나 요리에 관해 무엇이든 물어보세요!', 'bot');
+                this.historyLoaded = true;
+            }
+        } catch (error) {
+            console.error('채팅 기록 삭제 오류:', error);
         }
     }
 }

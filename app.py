@@ -3,6 +3,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv()
 import os
+os.environ['TZ'] = 'Asia/Seoul'
 from routes.sign import sign_bp  
 from routes.login import login_bp
 from routes.post import post_bp
@@ -11,6 +12,7 @@ from routes.post_detail import post_detail_bp
 from routes.mypage import mypage_bp
 from routes.review import review_bp  # 리뷰 시스템 추가
 from routes.chatbot import chatbot_bp #chatbot 시스템 추가
+from routes.chatbot import clear_user_chat_history
 
 app = Flask(__name__)
 app.secret_key = "dlehddnrWKdWKdaos"    # 비밀키 입니다 #
@@ -44,7 +46,20 @@ def sign_success_page():
 
 @app.route("/logout")
 def logout():
+    user_id = session.get("user_id")
+    
+    # 세션 먼저 클리어 (보안상 중요)
     session.clear()
+    
+    # 채팅 기록 삭제 (실패해도 로그아웃은 완료된 상태)
+    if user_id:
+        try:
+            from routes.chatbot import clear_user_chat_history
+            clear_user_chat_history(user_id)
+        except Exception as e:
+            # 로깅만 하고 사용자에게는 영향 없음
+            print(f"채팅 기록 삭제 중 오류 발생: {e}")
+    
     return redirect("/")
 
 @app.route("/search_result")
