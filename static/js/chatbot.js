@@ -1,12 +1,15 @@
-// static/js/chatbot.js
+// static/js/chatbot.js - 드래그 가능한 챗봇 버튼
 
 class ChatBot {
     constructor() {
         this.isOpen = false;
         this.isTyping = false;
+        this.isDragging = false;
+        this.dragOffset = { x: 0, y: 0 };
         
         this.initElements();
         this.initEventListeners();
+        this.initDraggable();
     }
 
     initElements() {
@@ -20,9 +23,6 @@ class ChatBot {
     }
 
     initEventListeners() {
-        if (this.button) {
-            this.button.addEventListener('click', () => this.toggle());
-        }
         if (this.closeBtn) {
             this.closeBtn.addEventListener('click', () => this.close());
         }
@@ -36,6 +36,170 @@ class ChatBot {
                     this.sendMessage();
                 }
             });
+        }
+    }
+
+    initDraggable() {
+        if (!this.button) return;
+
+        let startTime, startX, startY;
+        let isDragging = false;
+
+        this.button.addEventListener('mousedown', (e) => {
+            startTime = Date.now();
+            startX = e.clientX;
+            startY = e.clientY;
+            isDragging = false;
+            
+            this.startDrag(e.clientX, e.clientY);
+            
+            const onMouseMove = (e) => {
+                const deltaX = Math.abs(e.clientX - startX);
+                const deltaY = Math.abs(e.clientY - startY);
+                
+                if (deltaX > 10 || deltaY > 10) {
+                    isDragging = true;
+                    this.drag(e.clientX, e.clientY);
+                }
+            };
+            
+            const onMouseUp = (e) => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                this.endDrag();
+                
+                // 드래그하지 않았고 빠른 클릭이면 토글
+                const timeElapsed = Date.now() - startTime;
+                if (!isDragging && timeElapsed < 200) {
+                    this.toggle();
+                }
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            
+            e.preventDefault();
+        });
+
+        // 터치 이벤트
+        this.button.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            startTime = Date.now();
+            startX = touch.clientX;
+            startY = touch.clientY;
+            isDragging = false;
+            
+            this.startDrag(touch.clientX, touch.clientY);
+            e.preventDefault();
+        });
+
+        this.button.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            const deltaX = Math.abs(touch.clientX - startX);
+            const deltaY = Math.abs(touch.clientY - startY);
+            
+            if (deltaX > 10 || deltaY > 10) {
+                isDragging = true;
+                this.drag(touch.clientX, touch.clientY);
+            }
+            e.preventDefault();
+        });
+
+        this.button.addEventListener('touchend', (e) => {
+            this.endDrag();
+            
+            const timeElapsed = Date.now() - startTime;
+            if (!isDragging && timeElapsed < 200) {
+                this.toggle();
+            }
+            e.preventDefault();
+        });
+    }
+
+    startDrag(clientX, clientY) {
+        this.isDragging = false; // 일단 false로 시작
+        
+        const rect = this.button.getBoundingClientRect();
+        this.dragOffset.x = clientX - rect.left;
+        this.dragOffset.y = clientY - rect.top;
+        
+        // 드래그 시작 시 애니메이션 제거
+        this.button.style.transition = 'none';
+        this.button.style.cursor = 'grabbing';
+    }
+
+    drag(clientX, clientY) {
+        this.isDragging = true; // 실제로 움직이기 시작하면 true
+        
+        const newX = clientX - this.dragOffset.x;
+        const newY = clientY - this.dragOffset.y;
+        
+        // 화면 경계 체크
+        const buttonSize = 60; // 버튼 크기
+        const maxX = window.innerWidth - buttonSize;
+        const maxY = window.innerHeight - buttonSize;
+        
+        const boundedX = Math.max(0, Math.min(newX, maxX));
+        const boundedY = Math.max(0, Math.min(newY, maxY));
+        
+        // 절대 위치로 설정
+        this.button.style.position = 'fixed';
+        this.button.style.left = boundedX + 'px';
+        this.button.style.top = boundedY + 'px';
+        this.button.style.right = 'auto';
+        this.button.style.bottom = 'auto';
+    }
+
+    endDrag() {
+        // 드래그 종료 후 애니메이션 복원
+        this.button.style.transition = 'all 0.3s ease';
+        this.button.style.cursor = 'pointer';
+        
+        // 화면 가장자리에 스냅
+        this.snapToEdge();
+        
+        // 잠시 후 드래그 상태 리셋
+        setTimeout(() => {
+            this.isDragging = false;
+        }, 100);
+    }
+
+    snapToEdge() {
+        const rect = this.button.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // 가장 가까운 가장자리 찾기
+        const distances = {
+            left: centerX,
+            right: windowWidth - centerX,
+            top: centerY,
+            bottom: windowHeight - centerY
+        };
+        
+        const minDistance = Math.min(...Object.values(distances));
+        const closestEdge = Object.keys(distances).find(key => distances[key] === minDistance);
+        
+        // 가장자리에 스냅
+        const margin = 20;
+        
+        switch (closestEdge) {
+            case 'left':
+                this.button.style.left = margin + 'px';
+                break;
+            case 'right':
+                this.button.style.left = (windowWidth - 60 - margin) + 'px';
+                break;
+            case 'top':
+                this.button.style.top = margin + 'px';
+                break;
+            case 'bottom':
+                this.button.style.top = (windowHeight - 60 - margin) + 'px';
+                break;
         }
     }
 
