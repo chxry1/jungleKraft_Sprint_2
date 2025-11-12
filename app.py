@@ -15,7 +15,7 @@ from routes.chatbot import chatbot_bp #chatbot 시스템 추가
 from routes.chatbot import clear_user_chat_history
 
 app = Flask(__name__)
-app.secret_key = "dlehddnrWKdWKdaos"    # 비밀키 입니다 #
+app.secret_key = "@@@"    # 비밀키 입니다 #
 app.permanent_session_lifetime = timedelta(days=1) # 로그인 유지 기간 ( 하루 )  
 
 # 블루프린트 등록
